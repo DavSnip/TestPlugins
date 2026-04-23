@@ -34,7 +34,10 @@ jobs:
           ./gradlew UnjourUnfilm:make
           ./gradlew Coflix:make
 
-       - name: Upload artifacts
+      - name: Debug list cs3 files
+        run: find . -name "*.cs3"
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: cs3-builds
