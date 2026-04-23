@@ -27,7 +27,12 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build plugins
-        run: ./gradlew make
+        run: 
+        ./gradlew Papadustream:make
+        ./gradlew Flemmix:make
+        ./gradlew Dulourd:make
+        ./gradlew UnjourUnfilm:make
+        ./gradlew Coflix:make
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
