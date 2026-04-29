@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Reproductor IPTV</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+    <style>
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        .app {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #000;
+        }
+
+        .player-section {
+            height: 42vh;
+            min-height: 220px;
+            background: #000;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            flex: 0 0 auto;
+        }
+
+        .topbar {
+            flex: 0 0 78px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px;
+            background: #000;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .player-title {
+            flex: 1;
+            min-width: 0;
+            padding: 8px 10px;
+            border-radius: 12px;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(4px);
+            font-size: 14px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .video-wrap {
+            flex: 1;
+            min-height: 0;
+            background: #000;
+        }
+
+        @property --ring-angle {
+            syntax: '<angle>';
+            inherits: false;
+            initial-value: 0deg;
+        }
+
+        .vegeta-btn {
+            --ring-angle: 0deg;
+            border: 3px solid transparent;
+            border-radius: 22px;
+            padding: 12px 24px;
+            cursor: pointer;
+            white-space: nowrap;
+            background:
+                linear-gradient(rgba(8, 8, 8, 0.96), rgba(8, 8, 8, 0.96)) padding-box,
+                conic-gradient(
+                    from var(--ring-angle),
+                    #ff8a00 0deg,
+                    #ff5a1f 45deg,
+                    #ff2f92 90deg,
+                    #b026ff 135deg,
+                    #6a2dff 180deg,
+                    #2f6bff 225deg,
+                    #00cfff 270deg,
+                    #00f0ff 315deg,
+                    #ff8a00 360deg
+                ) border-box;
+            box-shadow:
+                0 0 12px rgba(255, 138, 0, 0.10),
+                0 0 18px rgba(176, 38, 255, 0.14),
+                0 0 24px rgba(0, 240, 255, 0.12),
+                inset 0 0 18px rgba(255,255,255,0.03),
+                inset 0 0 30px rgba(0,0,0,0.50);
+            animation: vegetaRingSpin 2.8s linear infinite;
+            transition: transform 0.18s ease, filter 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .vegeta-btn strong {
+            display: inline-block;
+            color: #d9d9d9;
+            font-size: 15px;
+            font-weight: 900;
+            letter-spacing: 0.4px;
+            text-shadow:
+                0 1px 0 rgba(255,255,255,0.08),
+                0 0 10px rgba(255,255,255,0.08);
+        }
+
+        .vegeta-btn:hover,
+        .vegeta-btn:active {
+            transform: scale(1.03);
+            filter: brightness(1.08);
+            box-shadow:
+                0 0 14px rgba(255, 138, 0, 0.14),
+                0 0 22px rgba(176, 38, 255, 0.18),
+                0 0 30px rgba(0, 240, 255, 0.16),
+                inset 0 0 18px rgba(255,255,255,0.03),
+                inset 0 0 30px rgba(0,0,0,0.50);
+        }
+
+        @keyframes vegetaRingSpin {
+            from { --ring-angle: 0deg; }
+            to   { --ring-angle: 360deg; }
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: #000;
+            object-fit: contain;
+        }
+
+        .list-section {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            background: #0b0b0b;
+            min-width: 0;
+        }
+
+        .list-header {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: #111;
+            font-size: 14px;
+            font-weight: bold;
+            flex: 0 0 auto;
+        }
+
+        .table-wrap {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        tr {
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            cursor: pointer;
+        }
+
+        tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        tr.active {
+            background: rgba(0, 207, 255, 0.14);
+        }
+
+        tr.retune-pulse {
+            animation: retunePulse 0.9s ease;
+        }
+
+        @keyframes retunePulse {
+            0% {
+                background: rgba(0, 207, 255, 0.14);
+                box-shadow: inset 0 0 0 rgba(0, 207, 255, 0);
+            }
+            35% {
+                background: rgba(0, 207, 255, 0.32);
+                box-shadow: inset 0 0 0 999px rgba(255,255,255,0.04);
+            }
+            100% {
+                background: rgba(0, 207, 255, 0.14);
+                box-shadow: inset 0 0 0 rgba(0, 207, 255, 0);
+            }
+        }
+
+        td {
+            padding: 10px 8px;
+            vertical-align: middle;
+            font-size: 14px;
+        }
+
+        .col-logo {
+            width: 58px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 42px;
+            height: 42px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #1a1a1a;
+            display: inline-block;
+        }
+
+        .name-box {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .channel-name {
+            font-weight: bold;
+            line-height: 1.2;
+        }
+
+        .channel-sub {
+            font-size: 12px;
+            opacity: 0.75;
+        }
+
+        .play-badge {
+            display: inline-block;
+            min-width: 58px;
+            text-align: center;
+            padding: 6px 8px;
+            border-radius: 999px;
+            background: #00cfff;
+            color: #000;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* ===== Mode PC / TV ===== */
+        body.desktop-tv-mode .app {
+            flex-direction: row-reverse;
+            align-items: flex-start;
+        }
+
+        body.desktop-tv-mode .player-section {
+            width: 70vw;
+            height: 46vh;
+            min-height: 320px;
+            max-height: 520px;
+            border-bottom: 0;
+            border-left: 1px solid rgba(255,255,255,0.08);
+            align-self: flex-start;
+        }
+
+        body.desktop-tv-mode .list-section {
+            width: 30vw;
+            height: 100vh;
+            flex: 0 0 auto;
+        }
+
+        body.desktop-tv-mode .topbar {
+            flex: 0 0 86px;
+            padding: 14px;
+        }
+
+        body.desktop-tv-mode .player-title {
+            font-size: 16px;
+        }
+
+        body.desktop-tv-mode .list-header {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            font-size: 15px;
+        }
+
+        body.desktop-tv-mode td {
+            padding: 12px 10px;
+            font-size: 15px;
+        }
+
+        body.desktop-tv-mode .channel-sub {
+            font-size: 13px;
+        }
+
+        body.desktop-tv-mode .logo {
+            width: 46px;
+            height: 46px;
+        }
+
+        body.desktop-tv-mode .table-wrap {
+            overflow-y: auto;
+        }
+
+        @media (max-width: 899px) {
+            body:not(.desktop-tv-mode) .app {
+                flex-direction: column;
+            }
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+    <div class="app">
+        <div class="player-section" id="wrap">
+            <div class="topbar">
+                <div class="player-title" id="playerTitle">FR | FRANCE • HEVC</div>
+
+                <button id="vegetaBtn" class="vegeta-btn" type="button">
+                    <strong>Vegeta TV</strong>
+                </button>
+            </div>
+
+            <div class="video-wrap">
+                <video
+                    id="video"
+                    controls
+                    autoplay
+                    playsinline
+                    webkit-playsinline
+                    x5-playsinline
+                    preload="auto"
+                ></video>
+            </div>
+        </div>
+
+        <div class="list-section">
+            <div class="list-header">Canales de la categoría: FR | FRANCE • HEVC</div>
+            <div class="table-wrap">
+                <table>
+                    <tbody id="channelsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const channels = [{"name": "|FR| TF1 |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/tt/tf1.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54673.m3u8"}, {"name": "|FR| TF1 +1 |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/TF1plus1.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54672.m3u8"}, {"name": "|FR| FRANCE 2 |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/ff/france2-fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54671.m3u8"}, {"name": "|FR| FRANCE 3 |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/ff/france3-fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54670.m3u8"}, {"name": "|FR| FRANCE 4 |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/ff/france4-fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54669.m3u8"}, {"name": "|FR| FRANCE 5 |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/ff/france5-fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54668.m3u8"}, {"name": "|FR| M6 |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/M6_new2020.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54666.m3u8"}, {"name": "|FR| C8 H265", "logo": "https://www.lyngsat.com/logo/tv/cc/canalplus_fr_c_8.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54665.m3u8"}, {"name": "|FR| W9 H265", "logo": "https://www.lyngsat.com/logo/tv/ww/w9_fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54664.m3u8"}, {"name": "|FR| ARTE |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/aa/arte_fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54663.m3u8"}, {"name": "|FR| RTL9 H265", "logo": "https://www.lyngsat.com/logo/tv/rr/rtl9.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54662.m3u8"}, {"name": "|FR| 6TER H265", "logo": "https://www.lyngsat.com/logo/tv/num/6ter_fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54661.m3u8"}, {"name": "|FR| TMC H265", "logo": "https://www.lyngsat.com/logo/tv/tt/tmc_mc.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54660.m3u8"}, {"name": "|FR| BFM PARIS |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/bb/bfm-paris-fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54659.m3u8"}, {"name": "|FR| LCP |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/ll/lcp-assemblee-nationale-fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54657.m3u8"}, {"name": "|FR| LA CHAINE METEO |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/ll/la_chaine_meteo_fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54656.m3u8"}, {"name": "|FR| FRANCE 24 H265-", "logo": "https://www.lyngsat.com/logo/tv/ff/france24_fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54653.m3u8"}, {"name": "|FR| BFM TV H265", "logo": "https://www.lyngsat.com/logo/tv/bb/bfm-tv-fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54651.m3u8"}, {"name": "|FR| LCI H265", "logo": "https://www.lyngsat.com/logo/tv/ll/lci-fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54650.m3u8"}, {"name": "|FR| CNEWS HEVC", "logo": "https://www.lyngsat.com/logo/tv/cc/canalplus_fr_c_news.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54649.m3u8"}, {"name": "|FR| CANAL+ H265", "logo": "https://www.lyngsat.com/logo/tv/cc/canalplus_fr_clair.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54648.m3u8"}, {"name": "|FR| CANAL+ CINEMA H265", "logo": "https://www.lyngsat.com/logo/tv/cc/canalplus_fr_cinema.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54647.m3u8"}, {"name": "|FR| CINE+ FRISSON H265", "logo": "https://www.lyngsat.com/logo/tv/cc/canalplus_fr_cine_plus_frisson.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54646.m3u8"}, {"name": "|FR| CANAL+ KIDS |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/cc/canalplus_fr_family.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54644.m3u8"}, {"name": "|FR| CINE+ PREMIER |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/cc/canalplus_fr_cine_plus_premier.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54643.m3u8"}, {"name": "|FR| CINE+ EMOTION |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/cc/canalplus_fr_cine_plus_emotion.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54642.m3u8"}, {"name": "|FR| CINE+ CLASSIC |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/cc/canalplus_fr_cine_plus_classic.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54641.m3u8"}, {"name": "|FR| CINE+ FAMIZ |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/cc/canalplus_fr_cine_plus_famiz.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54640.m3u8"}, {"name": "|FR| ACTION |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/aa/action_fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54635.m3u8"}, {"name": "|FR| WARNER TV |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/ww/warner_tv_us.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54634.m3u8"}, {"name": "|FR| ALTICE STUDIO |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/alticestudio.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54633.m3u8"}, {"name": "|FR| PARAMOUNT DECALE |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/paramountdecale.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54632.m3u8"}, {"name": "|FR|PARAMOUNT CHANNEL |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/Paramount_blanc.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54631.m3u8"}, {"name": "|FR| PARAMOUNT CHANNEL H265-", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/Paramount_blanc.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54630.m3u8"}, {"name": "|FR| POLAR+ |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/pp/polar-plus-fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54629.m3u8"}, {"name": "|FR| EQUIDIA |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/ee/equidia-fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54589.m3u8"}, {"name": "|FR| AUTOMOTO |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/aa/automoto-la-chaine-fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54586.m3u8"}, {"name": "|FR| CANAL SERIES |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/cc/canalplus_fr_series.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54582.m3u8"}, {"name": "|FR| PARIS PREMIERE |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE/parispremiere.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54581.m3u8"}, {"name": "|FR| COMEDY CENTRAL FRANCE |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/ComedyCentral_blanc.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54580.m3u8"}, {"name": "|FR| CSTAR |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/cc/canalplus_fr_c_star.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54579.m3u8"}, {"name": "|FR| COMEDIE+ |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/cc/canalplus_fr_comedie_plus.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54578.m3u8"}, {"name": "|FR| CHERIE 25 |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE/cherie25.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54577.m3u8"}, {"name": "|FR| SERIE CLUB |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/cc/canalplus_fr_serie_club.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54575.m3u8"}, {"name": "|FR|E! ENTERTAINMENT |HEVC|", "logo": "https://media.elcinema.com/tvguide/1273_1.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54573.m3u8"}, {"name": "|FR| BET |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE/bet.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54572.m3u8"}, {"name": "|FR| TV BREIZH |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE/tvbreizh.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54571.m3u8"}, {"name": "|FR| RMC STORY |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/RMCStory.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54570.m3u8"}, {"name": "|FR| TF1 SERIES FILMS |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE/tf1filmserie.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54569.m3u8"}, {"name": "|FR| TFX |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE/tfx.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54568.m3u8"}, {"name": "|FR| NRJ12 |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE/nrj12hd.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54567.m3u8"}, {"name": "|FR| AB3 |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/aa/ab-3-fr-be.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54566.m3u8"}, {"name": "|FR| AB1 |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/aa/ab1.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54565.m3u8"}, {"name": "|FR| SYFY |HEVC|", "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/SYFY.svg/1280px-SYFY.svg.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54564.m3u8"}, {"name": "|FR| TEVA |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/Teva.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54560.m3u8"}, {"name": "|FR| TV5 MONDE FBS |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/tv5monde.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54559.m3u8"}, {"name": "|FR| SCIENCES&VIE |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/science_vie.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54555.m3u8"}, {"name": "|FR| CHASSE & PECHE |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/Chasse_Peche.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54554.m3u8"}, {"name": "|FR| PLANETE+ CRIME |HEVC|", "logo": "https://upload.wikimedia.org/wikipedia/fr/thumb/d/dd/Planetepluscrime.png/640px-Planetepluscrime.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54553.m3u8"}, {"name": "|FR| PLANETE+ AVENTURE |HEVC|", "logo": "https://upload.wikimedia.org/wikipedia/fr/archive/f/f6/20241030103117%21Planeteplusaventure.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54552.m3u8"}, {"name": "|FR| USHUAIA |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/UshuaiaTV_new2020.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54551.m3u8"}, {"name": "|FR| CRIME DISTRICT |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/crimedistrict.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54550.m3u8"}, {"name": "|FR| SEASONS |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/Seasons.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54549.m3u8"}, {"name": "|FR| MUSEUM CHANNEL |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/mm/museum_tv_fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54547.m3u8"}, {"name": "|FR| TREK |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/TREK_new2020.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54546.m3u8"}, {"name": "|FR| TREK |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/TREK_new2020.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54545.m3u8"}, {"name": "|FR| RMC DECOUVERTE |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/rr/rmc-decouverte-fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54544.m3u8"}, {"name": "|FR| TOUTE L HISTOIRE |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/tt/toute_histoire_fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54543.m3u8"}, {"name": "|FR| DISCOVERY INVESTIGATION HEVC", "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Investigation_Discovery_Logo_2018.svg/1079px-Investigation_Discovery_Logo_2018.svg.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54542.m3u8"}, {"name": "|FR| TLC |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/tt/tlc_lam.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54541.m3u8"}, {"name": "|FR| DISCOVERY CHANNEL HEVC", "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/2019_Discovery_logo.svg/1280px-2019_Discovery_logo.svg.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54539.m3u8"}, {"name": "|FR| NAT GEO WILD |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/nn/national-geographic-wild-us.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54538.m3u8"}, {"name": "|FR| NATIONAL GEO |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/nn/nat_geo_us.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54537.m3u8"}, {"name": "|FR| ANIMAUX |HEVC|", "logo": "https://www.lyngsat.com/logo/tv/aa/animaux_fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54536.m3u8"}, {"name": "|FR| M6 MUSIC |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE/m6music.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54512.m3u8"}, {"name": "|FR| MCM TOP |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE/mcmtop.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54511.m3u8"}, {"name": "|FR| MTV FRANCE |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/MTV_blanc_new2020.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54509.m3u8"}, {"name": "|FR| OLYMPIA |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE%20OTT/olympiatv.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54505.m3u8"}, {"name": "|FR| MELODY TV |HEVC|", "logo": "https://logo-iptvpro.com/LOGO/FRANCE/melody.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54504.m3u8"}, {"name": "|FR| RFM TV |HEVC|", "logo": "https://www.lyngsat.com/logo/radio/rr/rfm_fr.png", "url": "http://pythontv.net:8789/live/x9607/2018123/54503.m3u8"}, {"name": "|FR| TRACE URBAN H265-", "logo": "https://thumb.canalplus.pro/bddpe/unsafe/266x200/56805501", "url": "http://pythontv.net:8789/live/x9607/2018123/54501.m3u8"}];
+        let video = document.getElementById('video');
+        const videoWrap = document.querySelector('.video-wrap');
+        const vegetaBtn = document.getElementById('vegetaBtn');
+        const channelsBody = document.getElementById('channelsBody');
+        const playerTitle = document.getElementById('playerTitle');
+
+        let hls = null;
+        let standbyVideo = null;
+        let standbyHls = null;
+        let activeIndex = -1;
+        let watchdogTimer = null;
+        let reconnectTimer = null;
+        let reconnectHoldTimer = null;
+        let reconnectInFlight = false;
+        let pendingReconnectReason = '';
+        let pendingRetuneRequest = null;
+        let userClickDelayTimer = null;
+        let stallRecoveryTimer = null;
+        let lastProgressAt = Date.now();
+        let lastCurrentTime = 0;
+        let lastUserClickAt = 0;
+        let preloadInProgress = false;
+        let preloadReady = false;
+        let preloadChannelIndex = -1;
+        let preloadTriggeredAt = 0;
+        let promoteStandbyOnReady = false;
+        let hasProgressed = false;
+        let startupLock = true;
+        let lastSeekableEnd = NaN;
+        let lastSeekableEndAt = 0;
+        let lastBoundaryRecoveryAt = 0;
+
+        const WATCHDOG_INTERVAL_MS = 1500;
+        const SECOND_CLICK_DELAY_MS = 3000;
+        const RECONNECT_TRIGGER_DELAY_MS = 1200;
+        const RECONNECT_SETTLE_MS = 4000;
+        const PRELOAD_NEAR_END_SEC = 10;
+        const PRELOAD_MIN_DURATION_SEC = 12;
+        const PRELOAD_EDGE_REMAINING_SEC = 12;
+        const PRELOAD_EDGE_STALE_MS = 1000;
+        const END_RECONNECT_CONFIRM_MS = 3200;
+        const END_EPSILON_SEC = 0.20;
+        const END_STALL_EDGE_MARGIN_SEC = 1.25;
+        const MID_STALL_RECOVERY_DELAY_MS = 1200;
+        const MID_STALL_WATCHDOG_CONFIRM_MS = 1800;
+        const LOW_BUFFER_AHEAD_SEC = 0.35;
+        const WEAK_STATE_BUFFER_AHEAD_SEC = 2.0;
+        const STARTUP_PROGRESS_MIN_SEC = 0.10;
+        const WINDOW_START_EPSILON_SEC = 0.75;
+        const WINDOW_DRIFT_CONFIRM_MS = 2500;
+        const WINDOW_RECOVERY_COOLDOWN_MS = 3500;
+        const SWITCH_RESCUE_DELAY_MS = 0;
+
+        function applyLayoutMode() {
+            const ua = navigator.userAgent || "";
+            const isTVUA = /TV|SMART-TV|SMARTTV|GoogleTV|Android TV|AFT|BRAVIA|Web0S|WebOS|Tizen|NetCast|Viera/i.test(ua);
+
+            const w = window.innerWidth || document.documentElement.clientWidth || screen.width || 0;
+            const h = window.innerHeight || document.documentElement.clientHeight || screen.height || 0;
+
+            const isLandscape = w > h;
+            const isWideScreen = w >= 900;
+            const isMediumWide = w >= 760;
+
+            const finePointer = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
+            const hoverCapable = window.matchMedia && window.matchMedia("(hover: hover)").matches;
+
+            const desktopTvMode =
+                isTVUA ||
+                isWideScreen ||
+                (isMediumWide && isLandscape) ||
+                (isMediumWide && finePointer && hoverCapable);
+
+            document.body.classList.toggle("desktop-tv-mode", desktopTvMode);
+        }
+
+        function safePlay(targetVideo) {
+            const media = targetVideo || video;
+            if (!media) return;
+
+            const p = media.play();
+            if (p && typeof p.catch === "function") {
+                p.catch(function(){});
+            }
+        }
+
+        function resetWatchdogProgress(forceCurrentTime) {
+            lastProgressAt = Date.now();
+            if (typeof forceCurrentTime === 'number') {
+                lastCurrentTime = forceCurrentTime;
+            } else {
+                lastCurrentTime = video.currentTime || 0;
+            }
+        }
+
+        function clearStallRecoveryTimer() {
+            if (stallRecoveryTimer) {
+                clearTimeout(stallRecoveryTimer);
+                stallRecoveryTimer = null;
+            }
+        }
+
+        function markSeekableProgress(targetVideo) {
+            try {
+                const end = getSeekableEnd(targetVideo || video);
+                if (!Number.isFinite(end) || end <= 0) return;
+                if (!Number.isFinite(lastSeekableEnd) || Math.abs(end - lastSeekableEnd) > 0.20) {
+                    lastSeekableEnd = end;
+                    lastSeekableEndAt = Date.now();
+                }
+            } catch (e) {}
+        }
+
+        function getRemainingToSeekableEnd(targetVideo) {
+            const media = targetVideo || video;
+
+            try {
+                const end = getSeekableEnd(media);
+                if (Number.isFinite(end) && end > 0) {
+                    return Math.max(0, end - (media.currentTime || 0));
+                }
+
+                if (Number.isFinite(media.duration) && media.duration > 0) {
+                    return Math.max(0, media.duration - (media.currentTime || 0));
+                }
+            } catch (e) {}
+
+            return Infinity;
+        }
+
+        function markStartupProgress(targetVideo) {
+            const media = targetVideo || video;
+            if (!media || media !== video) return;
+            if (hasProgressed) return;
+
+            const current = Number(media.currentTime || 0);
+            if (current > STARTUP_PROGRESS_MIN_SEC) {
+                hasProgressed = true;
+                startupLock = false;
+            }
+        }
+
+        function hasLowBufferedAhead(targetVideo) {
+            return getBufferedAhead(targetVideo) <= LOW_BUFFER_AHEAD_SEC;
+        }
+
+        function isPlaybackEdgeReloadZone(targetVideo) {
+            const media = targetVideo || video;
+            if (!media) return false;
+
+            const ahead = getBufferedAhead(media);
+            const remaining = getRemainingToSeekableEnd(media);
+            const endStaleFor = Date.now() - (lastSeekableEndAt || 0);
+            const nearFiniteEnd = isFiniteDurationMedia(media) && media.duration >= PRELOAD_MIN_DURATION_SEC && isNearPlaybackEnd(media, PRELOAD_NEAR_END_SEC);
+            const nearLiveEdge = ((remaining <= PRELOAD_EDGE_REMAINING_SEC && ahead <= PRELOAD_EDGE_REMAINING_SEC) && endStaleFor >= PRELOAD_EDGE_STALE_MS) || (remaining <= 5 && ahead <= 5);
+
+            return nearFiniteEnd || nearLiveEdge;
+        }
+
+        function shouldRecoverFromEndStall(targetVideo, minGapMs) {
+            const media = targetVideo || video;
+            const minGap = typeof minGapMs === 'number' ? minGapMs : 0;
+
+            if (!media || media !== video) return false;
+            if (reconnectInFlight || activeIndex < 0) return false;
+            if (startupLock || !hasProgressed) return false;
+            if (media.paused || media.seeking) return false;
+
+            const remaining = getRemainingToSeekableEnd(media);
+            const ahead = getBufferedAhead(media);
+            const nearEdgeStall = hasReachedPlaybackEnd(media) ||
+                (Number.isFinite(remaining) && remaining <= END_STALL_EDGE_MARGIN_SEC && ahead <= Math.max(WEAK_STATE_BUFFER_AHEAD_SEC, END_STALL_EDGE_MARGIN_SEC)) ||
+                isPlaybackEdgeReloadZone(media);
+
+            if (!nearEdgeStall) return false;
+
+            const gap = Date.now() - (lastProgressAt || 0);
+            if (gap < minGap) return false;
+
+            return true;
+        }
+
+        function queueMidStreamRecovery(reason, delayMs) {
+            clearStallRecoveryTimer();
+        }
+
+        function isFiniteDurationMedia(targetVideo) {
+            return !!targetVideo && Number.isFinite(targetVideo.duration) && targetVideo.duration > 0;
+        }
+
+        function isNearPlaybackEnd(targetVideo, thresholdSec) {
+            if (!isFiniteDurationMedia(targetVideo)) {
+                return false;
+            }
+
+            const threshold = typeof thresholdSec === 'number' ? thresholdSec : PRELOAD_NEAR_END_SEC;
+            return targetVideo.currentTime >= Math.max(0, targetVideo.duration - threshold);
+        }
+
+        function clearReconnectHoldTimer() {
+            if (reconnectHoldTimer) {
+                clearTimeout(reconnectHoldTimer);
+                reconnectHoldTimer = null;
+            }
+        }
+
+        function clearPendingReconnect() {
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            pendingReconnectReason = '';
+        }
+
+        function maybeCancelScheduledReconnect(targetVideo, evtName) {
+            const media = targetVideo || video;
+            if (!media || media !== video) return;
+            if (!reconnectTimer) return;
+            if (pendingRetuneRequest) return;
+
+            const healthyEvent = evtName === 'playing' || evtName === 'timeupdate' || evtName === 'canplay' || evtName === 'loadeddata' || evtName === 'progress' || evtName === 'seeked';
+            if (!healthyEvent) return;
+
+            const current = media.currentTime || 0;
+            const progressed = Math.abs(current - lastCurrentTime) >= 0.05;
+            const hasPicture = (media.readyState || 0) >= 2;
+
+            if (!progressed && evtName !== 'playing' && evtName !== 'canplay' && evtName !== 'loadeddata') {
+                return;
+            }
+
+            if (!hasPicture) {
+                return;
+            }
+
+            clearPendingReconnect();
+            releaseReconnectLock();
+        }
+
+        function releaseReconnectLock() {
+            clearReconnectHoldTimer();
+            reconnectInFlight = false;
+        }
+
+        function holdReconnectLock(delayMs) {
+            clearReconnectHoldTimer();
+            reconnectInFlight = true;
+            reconnectHoldTimer = setTimeout(function () {
+                reconnectHoldTimer = null;
+                reconnectInFlight = false;
+            }, typeof delayMs === 'number' ? delayMs : RECONNECT_SETTLE_MS);
+        }
+
+        function destroyHls() {
+            if (hls) {
+                try { hls.destroy(); } catch (e) {}
+                hls = null;
+            }
+        }
+
+        function destroyStandbyPipeline() {
+            if (standbyHls) {
+                try { standbyHls.destroy(); } catch (e) {}
+                standbyHls = null;
+            }
+
+            if (standbyVideo) {
+                try { standbyVideo.pause(); } catch (e) {}
+                try {
+                    standbyVideo.removeAttribute('src');
+                    standbyVideo.load();
+                } catch (e) {}
+                try { standbyVideo.remove(); } catch (e) {}
+                standbyVideo = null;
+            }
+
+            preloadInProgress = false;
+            preloadReady = false;
+            preloadChannelIndex = -1;
+            preloadTriggeredAt = 0;
+            promoteStandbyOnReady = false;
+        }
+
+        function resetPreloadState() {
+            destroyStandbyPipeline();
+        }
+
+        function createHlsInstance() {
+            return new Hls({
+                enableWorker: true,
+                lowLatencyMode: true,
+                liveSyncDurationCount: 10,
+                liveMaxLatencyDurationCount: 20,
+                maxBufferLength: 60,
+                maxMaxBufferLength: 120,
+                backBufferLength: 180,
+                fragLoadingTimeOut: 10000,
+                manifestLoadingTimeOut: 10000,
+                debug: false
+            });
+        }
+
+        function getBufferedAhead(targetVideo) {
+            try {
+                const media = targetVideo || video;
+                const buffered = media && media.buffered;
+                if (!buffered || buffered.length === 0) {
+                    return 0;
+                }
+
+                return Math.max(0, buffered.end(buffered.length - 1) - (media.currentTime || 0));
+            } catch (e) {
+                return 0;
+            }
+        }
+
+        function getSeekableEnd(targetVideo) {
+            try {
+                const media = targetVideo || video;
+                const seekable = media && media.seekable;
+                if (!seekable || seekable.length === 0) {
+                    return NaN;
+                }
+
+                return seekable.end(seekable.length - 1);
+            } catch (e) {
+                return NaN;
+            }
+        }
+
+        function getSeekableStart(targetVideo) {
+            try {
+                const media = targetVideo || video;
+                const seekable = media && media.seekable;
+                if (!seekable || seekable.length === 0) {
+                    return NaN;
+                }
+
+                return seekable.start(0);
+            } catch (e) {
+                return NaN;
+            }
+        }
+
+        function isBehindSeekableWindow(targetVideo) {
+            const media = targetVideo || video;
+            if (!media) return false;
+
+            const start = getSeekableStart(media);
+            if (!Number.isFinite(start)) return false;
+
+            return (media.currentTime || 0) + WINDOW_START_EPSILON_SEC < start;
+        }
+
+        function shouldRecoverFromWindowDrift(targetVideo, minGapMs) {
+            const media = targetVideo || video;
+            const minGap = typeof minGapMs === 'number' ? minGapMs : 0;
+
+            if (!media || media !== video) return false;
+            if (reconnectInFlight || activeIndex < 0) return false;
+            if (startupLock || !hasProgressed) return false;
+            if (media.paused || media.seeking) return false;
+            if (!isBehindSeekableWindow(media)) return false;
+
+            const now = Date.now();
+            const gap = now - (lastProgressAt || 0);
+            if (gap < minGap) return false;
+            if ((now - lastBoundaryRecoveryAt) < WINDOW_RECOVERY_COOLDOWN_MS) return false;
+
+            return true;
+        }
+
+        function triggerBoundaryRecovery(reason, delayMs) {
+            const now = Date.now();
+            if ((now - lastBoundaryRecoveryAt) < WINDOW_RECOVERY_COOLDOWN_MS) {
+                return;
+            }
+
+            lastBoundaryRecoveryAt = now;
+            scheduleReconnect(reason || 'window-drift', typeof delayMs === 'number' ? delayMs : 1500);
+        }
+
+        function shouldSyncVideoToLive(targetVideo) {
+            return false;
+        }
+
+        function syncTargetVideoToLive(targetVideo, hlsInstance) {
+            if (!targetVideo) return;
+            if (!shouldSyncVideoToLive(targetVideo)) return;
+
+            let target = NaN;
+
+            try {
+                if (hlsInstance && Number.isFinite(hlsInstance.liveSyncPosition) && hlsInstance.liveSyncPosition > 0) {
+                    target = hlsInstance.liveSyncPosition;
+                }
+            } catch (e) {}
+
+            if (!Number.isFinite(target)) {
+                const end = getSeekableEnd(targetVideo);
+                if (Number.isFinite(end) && end > 0) {
+                    target = Math.max(targetVideo.currentTime || 0, end - 0.60);
+                }
+            }
+
+            if (!Number.isFinite(target) || target <= 0) {
+                return;
+            }
+
+            try {
+                targetVideo.currentTime = target;
+            } catch (e) {}
+        }
+
+        function markStandbyReady(targetVideo) {
+            if (!targetVideo || targetVideo !== standbyVideo) {
+                return;
+            }
+
+            preloadInProgress = false;
+            preloadReady = true;
+            safePlay(targetVideo);
+
+            if (promoteStandbyOnReady) {
+                setTimeout(function () {
+                    if (promoteStandbyOnReady && targetVideo === standbyVideo) {
+                        promoteStandbyToActive();
+                    }
+                }, 0);
+            }
+        }
+
+        function bindHlsCoreEvents(hlsInstance, targetVideo) {
+            if (!hlsInstance || !targetVideo) return;
+
+            hlsInstance.on(Hls.Events.MANIFEST_PARSED, function () {
+                try {
+                    if (typeof hlsInstance.startLoad === 'function') {
+                        hlsInstance.startLoad();
+                    }
+                } catch (e) {}
+
+                syncTargetVideoToLive(targetVideo, hlsInstance);
+                safePlay(targetVideo);
+            });
+
+            hlsInstance.on(Hls.Events.ERROR, function (event, data) {
+                if (!data || !data.fatal) return;
+
+                const targetIsActive = targetVideo === video;
+
+                if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                    try {
+                        hlsInstance.recoverMediaError();
+                        if (targetIsActive) {
+                            resetWatchdogProgress();
+                            releaseReconnectLock();
+                        }
+                        return;
+                    } catch (e) {
+                        if (targetIsActive) {
+                            scheduleReconnect('fatal-media');
+                        } else {
+                            destroyStandbyPipeline();
+                        }
+                        return;
+                    }
+                }
+
+                if (targetIsActive) {
+                    scheduleReconnect('fatal-hls');
+                } else {
+                    destroyStandbyPipeline();
+                }
+            });
+        }
+
+        function completeStandbyWarmup(targetVideo) {
+            if (!targetVideo || targetVideo !== standbyVideo) {
+                return;
+            }
+
+            if (targetVideo.dataset.firstFrameReady === '1') {
+                return;
+            }
+
+            delete targetVideo.dataset.frameWarmupArmed;
+            targetVideo.dataset.firstFrameReady = '1';
+            markStandbyReady(targetVideo);
+        }
+
+        function waitForStandbyFirstFrame(targetVideo) {
+            if (!targetVideo || targetVideo !== standbyVideo) {
+                return;
+            }
+
+            if (targetVideo.dataset.firstFrameReady === '1' || targetVideo.dataset.frameWarmupArmed === '1') {
+                return;
+            }
+
+            targetVideo.dataset.frameWarmupArmed = '1';
+            safePlay(targetVideo);
+
+            const finalize = function () {
+                if (!targetVideo || targetVideo !== standbyVideo) {
+                    return;
+                }
+
+                if ((targetVideo.readyState || 0) < 2 && getBufferedAhead(targetVideo) <= 0.10) {
+                    setTimeout(finalize, 60);
+                    return;
+                }
+
+                completeStandbyWarmup(targetVideo);
+            };
+
+            if (typeof targetVideo.requestVideoFrameCallback === 'function') {
+                try {
+                    targetVideo.requestVideoFrameCallback(function () {
+                        finalize();
+                    });
+                    return;
+                } catch (e) {}
+            }
+
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    finalize();
+                });
+            });
+
+            setTimeout(finalize, 180);
+        }
+
+        function bindNativeReady(targetVideo, isStandby) {
+            if (!targetVideo || targetVideo.dataset.readyBound === '1') return;
+
+            targetVideo.dataset.readyBound = '1';
+
+            ['loadeddata', 'canplay'].forEach(function (evt) {
+                targetVideo.addEventListener(evt, function onReady() {
+                    syncTargetVideoToLive(targetVideo, null);
+
+                    if (isStandby || targetVideo === standbyVideo) {
+                        waitForStandbyFirstFrame(targetVideo);
+                        return;
+                    }
+
+                    if (targetVideo.dataset.firstFrameReady === '1') {
+                        return;
+                    }
+
+                    targetVideo.dataset.firstFrameReady = '1';
+
+                    if (targetVideo === video) {
+                        releaseReconnectLock();
+                        resetWatchdogProgress(targetVideo.currentTime || 0);
+                        safePlay(targetVideo);
+                    }
+                }, { passive: true });
+            });
+        }
+
+        function hasReachedPlaybackEnd(targetVideo) {
+            const media = targetVideo || video;
+            if (!media) {
+                return false;
+            }
+
+            if (media.ended) {
+                return true;
+            }
+
+            if (!Number.isFinite(media.duration) || media.duration <= 0) {
+                return false;
+            }
+
+            const current = Number.isFinite(media.currentTime) ? media.currentTime : 0;
+            const remaining = media.duration - current;
+
+            return remaining <= END_EPSILON_SEC;
+        }
+
+        function attachChannelSourceTo(targetVideo, ch, isStandby) {
+            if (!targetVideo || !ch) return;
+
+            delete targetVideo.dataset.firstFrameReady;
+            delete targetVideo.dataset.frameWarmupArmed;
+            bindNativeReady(targetVideo, isStandby);
+
+            if (Hls.isSupported()) {
+                const instance = createHlsInstance();
+                bindHlsCoreEvents(instance, targetVideo);
+
+                if (isStandby) {
+                    if (standbyHls) {
+                        try { standbyHls.destroy(); } catch (e) {}
+                    }
+                    standbyHls = instance;
+                } else {
+                    destroyHls();
+                    hls = instance;
+                }
+
+                instance.loadSource(ch.url);
+                instance.attachMedia(targetVideo);
+                return;
+            }
+
+            targetVideo.src = ch.url;
+            if (!isStandby) {
+                safePlay(targetVideo);
+            }
+        }
+
+        function attachChannelSource(ch) {
+            resetPreloadState();
+            attachChannelSourceTo(video, ch, false);
+        }
+
+        function getChannelRow(index) {
+            return document.querySelector('tr[data-index="' + index + '"]');
+        }
+
+        function pulseRetuneRow(index) {
+            const row = getChannelRow(index);
+            if (!row) return;
+
+            row.classList.remove('retune-pulse');
+            void row.offsetWidth;
+            row.classList.add('retune-pulse');
+
+            setTimeout(function () {
+                row.classList.remove('retune-pulse');
+            }, 900);
+        }
+
+        function hardResetVideoElement() {
+            try { video.pause(); } catch (e) {}
+            destroyHls();
+
+            try {
+                if (video.srcObject) {
+                    video.srcObject = null;
+                }
+            } catch (e) {}
+
+            try { video.removeAttribute('src'); } catch (e) {}
+            try { video.load(); } catch (e) {}
+        }
+
+        function createStandbyVideoElement() {
+            if (standbyVideo) {
+                return standbyVideo;
+            }
+
+            const el = document.createElement('video');
+            el.muted = true;
+            el.volume = video.volume;
+            el.playbackRate = video.playbackRate || 1;
+            el.autoplay = true;
+            el.controls = false;
+            el.preload = 'auto';
+            el.playsInline = true;
+            el.setAttribute('playsinline', '');
+            el.setAttribute('webkit-playsinline', '');
+            el.setAttribute('x5-playsinline', '');
+            el.style.position = 'absolute';
+            el.style.left = '-99999px';
+            el.style.top = '0';
+            el.style.width = '1px';
+            el.style.height = '1px';
+            el.style.opacity = '0';
+            el.style.pointerEvents = 'none';
+            el.style.background = '#000';
+            el.style.objectFit = 'contain';
+            videoWrap.appendChild(el);
+            standbyVideo = el;
+            return standbyVideo;
+        }
+
+        function startBackgroundReload() {
+            if (activeIndex < 0) return;
+            if (preloadInProgress || preloadReady) return;
+            if (preloadChannelIndex === activeIndex) return;
+
+            const ch = channels[activeIndex];
+            if (!ch || !ch.url) return;
+
+            preloadInProgress = true;
+            preloadReady = false;
+            preloadChannelIndex = activeIndex;
+            preloadTriggeredAt = Date.now();
+
+            const targetVideo = createStandbyVideoElement();
+            attachChannelSourceTo(targetVideo, ch, true);
+        }
+
+        function maybePrepareBackgroundReload() {
+            if (activeIndex < 0) return;
+            if (reconnectInFlight) return;
+            if (!video || video.seeking) return;
+            if (startupLock || !hasProgressed) return;
+
+            if (hasReachedPlaybackEnd(video) || isNearPlaybackEnd(video, PRELOAD_NEAR_END_SEC)) {
+                startBackgroundReload();
+            }
+        }
+
+        function promoteStandbyToActive() {
+            if (!preloadReady || !standbyVideo) {
+                return false;
+            }
+
+            promoteStandbyOnReady = false;
+            clearTimeout(reconnectTimer);
+
+            const previousVideo = video;
+            const previousHls = hls;
+            const nextVideo = standbyVideo;
+
+            nextVideo.controls = true;
+            nextVideo.muted = previousVideo.muted;
+            nextVideo.volume = previousVideo.volume;
+            nextVideo.playbackRate = previousVideo.playbackRate || 1;
+            nextVideo.style.position = 'static';
+            nextVideo.style.left = 'auto';
+            nextVideo.style.top = 'auto';
+            nextVideo.style.width = '100%';
+            nextVideo.style.height = '100%';
+            nextVideo.style.opacity = '1';
+            nextVideo.style.pointerEvents = 'auto';
+            nextVideo.style.display = 'block';
+
+            if (previousVideo.parentNode) {
+                previousVideo.parentNode.replaceChild(nextVideo, previousVideo);
+            }
+
+            video = nextVideo;
+            hls = standbyHls;
+            standbyVideo = null;
+            standbyHls = null;
+            preloadInProgress = false;
+            preloadReady = false;
+            preloadChannelIndex = -1;
+            preloadTriggeredAt = 0;
+
+            bindPlaybackEvents(video);
+            resetWatchdogProgress(video.currentTime || 0);
+            releaseReconnectLock();
+            safePlay(video);
+
+            try {
+                if (previousHls && previousHls !== hls) {
+                    previousHls.destroy();
+                }
+            } catch (e) {}
+
+            try { previousVideo.pause(); } catch (e) {}
+            try {
+                previousVideo.removeAttribute('src');
+                previousVideo.load();
+            } catch (e) {}
+
+            return true;
+        }
+
+        function reconnectCurrentChannel(reason) {
+            const ch = channels[activeIndex];
+            if (!ch) {
+                releaseReconnectLock();
+                return;
+            }
+
+            holdReconnectLock(RECONNECT_SETTLE_MS);
+            pendingRetuneRequest = {
+                hardReset: true,
+                preserveState: true,
+                forceReload: true,
+                keepReconnectLock: true,
+                reason: reason || 'retune'
+            };
+
+            loadChannel(activeIndex, pendingRetuneRequest);
+            pendingRetuneRequest = null;
+        }
+
+        function scheduleReconnect(reason, delayMs) {
+            if (reconnectInFlight) return;
+            reconnectInFlight = true;
+            clearPendingReconnect();
+            pendingReconnectReason = reason || '';
+
+            reconnectTimer = setTimeout(function () {
+                reconnectTimer = null;
+                reconnectCurrentChannel(reason);
+            }, typeof delayMs === 'number' ? delayMs : RECONNECT_TRIGGER_DELAY_MS);
+        }
+
+        function startPlaybackWatchdog() {
+            clearInterval(watchdogTimer);
+
+            watchdogTimer = setInterval(function () {
+                if (reconnectInFlight) return;
+                if (activeIndex < 0) return;
+                if (video.seeking) return;
+                if (startupLock || !hasProgressed) return;
+
+                maybePrepareBackgroundReload();
+
+                const current = video.currentTime || 0;
+                const noProgress = Math.abs(current - lastCurrentTime) < 0.05;
+                const reachedEnd = hasReachedPlaybackEnd(video);
+                const frozenAtEnd = noProgress && shouldRecoverFromEndStall(video, END_RECONNECT_CONFIRM_MS);
+                const frozenOutsideWindow = noProgress && shouldRecoverFromWindowDrift(video, WINDOW_DRIFT_CONFIRM_MS);
+
+                if (frozenOutsideWindow) {
+                    scheduleReconnect('window-drift-watchdog', 1500);
+                    return;
+                }
+
+                if (video.ended || frozenAtEnd || reachedEnd) {
+                    promoteStandbyOnReady = true;
+                    startBackgroundReload();
+
+                    if (promoteStandbyToActive()) {
+                        return;
+                    }
+
+                    scheduleReconnect('playback-end', SWITCH_RESCUE_DELAY_MS);
+                    return;
+                }
+
+                lastCurrentTime = current;
+            }, WATCHDOG_INTERVAL_MS);
+        }
+
+        function bindPlaybackEvents(targetVideo) {
+            if (!targetVideo || targetVideo.dataset.playbackBound === '1') {
+                return;
+            }
+
+            targetVideo.dataset.playbackBound = '1';
+
+            ['playing', 'timeupdate', 'canplay', 'loadeddata', 'seeked', 'progress', 'durationchange'].forEach(function (evt) {
+                targetVideo.addEventListener(evt, function () {
+                    if (targetVideo !== video) {
+                        return;
+                    }
+
+                    if (evt === 'timeupdate' || evt === 'playing') {
+                        markStartupProgress(targetVideo);
+                    }
+
+                    if (evt === 'timeupdate' || evt === 'loadeddata' || evt === 'canplay' || evt === 'progress' || evt === 'durationchange') {
+                        markSeekableProgress(targetVideo);
+                    }
+
+                    clearStallRecoveryTimer();
+
+                    if (evt === 'timeupdate') {
+                        maybePrepareBackgroundReload();
+                    }
+
+                    maybeCancelScheduledReconnect(targetVideo, evt);
+
+                    if (!reconnectInFlight || reconnectTimer) {
+                        resetWatchdogProgress();
+                    }
+                }, { passive: true });
+            });
+
+            targetVideo.addEventListener('ended', function () {
+                if (targetVideo !== video) {
+                    return;
+                }
+
+                clearStallRecoveryTimer();
+                promoteStandbyOnReady = true;
+                startBackgroundReload();
+
+                if (promoteStandbyToActive()) {
+                    return;
+                }
+
+                scheduleReconnect('video-ended', SWITCH_RESCUE_DELAY_MS);
+            });
+
+            targetVideo.addEventListener('stalled', function () {
+                if (targetVideo !== video) {
+                    return;
+                }
+
+                if (hasReachedPlaybackEnd(targetVideo) || isPlaybackEdgeReloadZone(targetVideo)) {
+                    promoteStandbyOnReady = true;
+                    startBackgroundReload();
+
+                    if (promoteStandbyToActive()) {
+                        return;
+                    }
+
+                    scheduleReconnect('video-stalled-end', SWITCH_RESCUE_DELAY_MS);
+                }
+            });
+
+            targetVideo.addEventListener('waiting', function () {
+                if (targetVideo !== video) {
+                    return;
+                }
+
+                if (hasReachedPlaybackEnd(targetVideo) || isPlaybackEdgeReloadZone(targetVideo)) {
+                    promoteStandbyOnReady = true;
+                    startBackgroundReload();
+
+                    if (promoteStandbyToActive()) {
+                        return;
+                    }
+
+                    scheduleReconnect('video-waiting-end', SWITCH_RESCUE_DELAY_MS);
+                }
+            });
+        }
+
+        function loadChannel(index, options) {
+            if (!channels[index]) return;
+
+            const ch = channels[index];
+            const opts = options || {};
+            const keepMuted = video.muted;
+            const keepVolume = video.volume;
+            const keepPlaybackRate = video.playbackRate || 1;
+
+            activeIndex = index;
+            hasProgressed = false;
+            startupLock = true;
+            lastSeekableEnd = NaN;
+            lastSeekableEndAt = 0;
+            lastBoundaryRecoveryAt = 0;
+            promoteStandbyOnReady = false;
+            clearTimeout(reconnectTimer);
+            clearStallRecoveryTimer();
+            if (!opts.keepReconnectLock) {
+                releaseReconnectLock();
+            }
+            playerTitle.textContent = ch.name || "Canal";
+            highlightActiveRow();
+            resetPreloadState();
+
+            if (opts.hardReset) {
+                hardResetVideoElement();
+            }
+
+            resetWatchdogProgress(0);
+            attachChannelSource(ch);
+
+            if (opts.preserveState) {
+                video.muted = keepMuted;
+                video.volume = keepVolume;
+                video.playbackRate = keepPlaybackRate;
+            }
+        }
+
+        function handleUserChannelClick(index) {
+            const options = pendingRetuneRequest || undefined;
+            pendingRetuneRequest = null;
+
+            const now = Date.now();
+            const secondClickTooSoon = lastUserClickAt > 0 && (now - lastUserClickAt) < SECOND_CLICK_DELAY_MS;
+            lastUserClickAt = now;
+
+            clearTimeout(userClickDelayTimer);
+
+            if (secondClickTooSoon) {
+                userClickDelayTimer = setTimeout(function () {
+                    loadChannel(index, options);
+                    lastUserClickAt = 0;
+                }, SECOND_CLICK_DELAY_MS);
+                return;
+            }
+
+            loadChannel(index, options);
+        }
+
+        function highlightActiveRow() {
+            const rows = document.querySelectorAll('tr[data-index]');
+            rows.forEach(function(row) {
+                const idx = parseInt(row.getAttribute('data-index'), 10);
+                row.classList.toggle('active', idx === activeIndex);
+            });
+        }
+
+        function renderChannels() {
+            channelsBody.innerHTML = '';
+
+            channels.forEach(function(ch, index) {
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-index', index);
+
+                const tdLogo = document.createElement('td');
+                tdLogo.className = 'col-logo';
+
+                const img = document.createElement('img');
+                img.className = 'logo';
+                img.alt = ch.name || 'logo';
+                img.src = ch.logo || '';
+                img.onerror = function() {
+                    this.style.visibility = 'hidden';
+                };
+                tdLogo.appendChild(img);
+
+                const tdInfo = document.createElement('td');
+                const nameBox = document.createElement('div');
+                nameBox.className = 'name-box';
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'channel-name';
+                nameDiv.textContent = ch.name || 'Canal';
+
+                const subDiv = document.createElement('div');
+                subDiv.className = 'channel-sub';
+                subDiv.textContent = 'Toca para reproducir';
+
+                nameBox.appendChild(nameDiv);
+                nameBox.appendChild(subDiv);
+                tdInfo.appendChild(nameBox);
+
+                const tdAction = document.createElement('td');
+                tdAction.style.width = '80px';
+                tdAction.style.textAlign = 'right';
+
+                const badge = document.createElement('span');
+                badge.className = 'play-badge';
+                badge.textContent = '▶ Ver';
+                tdAction.appendChild(badge);
+
+                tr.appendChild(tdLogo);
+                tr.appendChild(tdInfo);
+                tr.appendChild(tdAction);
+
+                tr.addEventListener('click', function() {
+                    handleUserChannelClick(index);
+                });
+
+                channelsBody.appendChild(tr);
+            });
+        }
+
+        bindPlaybackEvents(video);
+
+        vegetaBtn.addEventListener('click', function () {
+            window.location.href = 'https://fuego01.github.io/Vegetatv/';
+        });
+
+        applyLayoutMode();
+        window.addEventListener('resize', applyLayoutMode);
+        window.addEventListener('orientationchange', applyLayoutMode);
+
+        startPlaybackWatchdog();
+
+        renderChannels();
+
+        if (channels.length > 0) {
+            loadChannel(0);
+        }
+    </script>
+</body>
+</html>
